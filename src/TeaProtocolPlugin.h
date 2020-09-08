@@ -1,13 +1,24 @@
 #ifndef hifi_TeaProtocolPluginImpl_h
 #define hifi_TeaProtocolPluginImpl_h
 
-#include <QString>
+#include <QUrl>
 
 #include <plugins/TeaProtocolPlugin.h>
+#include <ResourceRequest.h>
+
+#include "TeaResourceRequest.h"
 
 class TeaProtocolPluginImpl : public TeaProtocolPlugin {
 public:
-    QByteArray getFile(QString path) override;
+    virtual ResourceRequest* initRequest(
+        const QUrl& url,
+        const bool isObservable = true,
+        const qint64 callerId = -1,
+        const QString& extra = ""
+    ) override {
+        return new TeaResourceRequest(url, isObservable, callerId, extra);
+    }
+
 };
 
 #endif // hifi_TeaProtocolPluginImpl_h

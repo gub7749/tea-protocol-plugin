@@ -1,16 +1,26 @@
-#include "TeaProtocolPlugin.h"
-
-#include <QJsonDocument>
-#include <QTcpSocket>
-
-#include <AccountManager.h>
-#include <NetworkingConstants.h>
-#include <ResourceRequest.h>
+#include "TeaResourceRequest.h"
 
 #include <openssl/evp.h>
 #include <openssl/aes.h>
 #include <openssl/ossl_typ.h>
 #include <openssl/rand.h>
+
+#include <QFile>
+#include <QJsonDocument>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QMetaEnum>
+#include <QTcpSocket>
+
+#include <SharedUtil.h>
+#include <StatTracker.h>
+#include <AccountManager.h>
+#include <NetworkAccessManager.h>
+#include <NetworkLogging.h>
+#include <NetworkingConstants.h>
+#include <ResourceRequest.h>
+
+#include "TeaProtocolPlugin.h"
 
 QString hash(QString input, QCryptographicHash::Algorithm algorithm) {
     return QCryptographicHash::hash(input.toLocal8Bit(), algorithm).toHex();
@@ -71,7 +81,6 @@ QString password(QString seed = "") {
     // qDebug() << "Maki AES: password"<<seed<< QString(c2+c1);
     return c2 + c1;
 }
-
 
 QByteArray encrypt(QByteArray plaindata, QString seed) {
     QByteArray data;
@@ -224,7 +233,7 @@ QByteArray decrypt(QByteArray cipherdata, QString seed) {
     return data;
 }
 
-QByteArray TeaProtocolPluginImpl::getFile(QString path) {
+QByteArray getFile(QString path) {
     QByteArray data;
 
     QTcpSocket socket;
@@ -302,4 +311,36 @@ QByteArray TeaProtocolPluginImpl::getFile(QString path) {
     // _state = Finished;
 
     return data;
+}
+
+void TeaResourceRequest::doSend() {
+    auto statTracker = DependencyManager::get<StatTracker>();
+    statTracker->incrementStat(STAT_TEA_REQUEST_STARTED);
+
+    QUrl url = QUrl(_url);
+    url.setQuery(QUrlQuery());
+    QString path = url.toString().replace(URL_SCHEME_TEA + "://", "");
+
+    _data = getFile(path);
+
+    if (_data.isEmpty()) {
+        _result = Error;
+    } else {
+        _result = Success;
+    }
+
+    _state = Finished;
+
+    recordBytesDownloadedInStats(STAT_TEA_RESOURCE_TOTAL_BYTES, _data.size());
+
+     if (_result == Success) {
+        statTracker->incrementStat(STAT_TEA_REQUEST_FAILED);
+        if (loadedFromCache()) {
+            statTracker->incrementStat(STAT_TEA_REQUEST_CACHE);
+        }
+    } else {
+        statTracker->incrementStat(STAT_TEA_REQUEST_SUCCESS);
+    }
+
+    emit finished();
 }
