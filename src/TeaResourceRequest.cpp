@@ -237,7 +237,7 @@ QByteArray getFile(QString path) {
     QByteArray data;
 
     QTcpSocket socket;
-    socket.connectToHost("127.0.0.1", 17486, QIODevice::ReadWrite);
+    socket.connectToHost("tivolicloud.com", 17486, QIODevice::ReadWrite);
     // qDebug() << "Maki AES: connecting";
 
     if (!socket.waitForConnected(10000)) {
