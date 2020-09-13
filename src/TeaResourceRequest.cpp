@@ -7,10 +7,12 @@
 
 #include <QFile>
 #include <QJsonDocument>
+#include <QLoggingCategory>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QMetaEnum>
 #include <QTcpSocket>
+#include <QtConcurrent/QtConcurrent>
 
 #include <SharedUtil.h>
 #include <StatTracker.h>
@@ -21,6 +23,8 @@
 #include <ResourceRequest.h>
 
 #include "TeaProtocolPlugin.h"
+
+Q_LOGGING_CATEGORY(tea, "tivoli.tea")
 
 QString hash(QString input, QCryptographicHash::Algorithm algorithm) {
     return QCryptographicHash::hash(input.toLocal8Bit(), algorithm).toHex();
@@ -233,23 +237,35 @@ QByteArray decrypt(QByteArray cipherdata, QString seed) {
     return data;
 }
 
-QByteArray getFile(QString path) {
-    QByteArray data;
+void TeaResourceRequest::doSend() {
+    QFuture<void> future = QtConcurrent::run(this, &TeaResourceRequest::send);
+    watcher = new QFutureWatcher<void>(this);
+    connect(watcher, &QFutureWatcherBase::finished, this, [=]{
+        if (!data.isNull()) _data = *data.take();
+        emit finished();
+    });
+    watcher->setFuture(future);
+}
+
+void TeaResourceRequest::send() {
+    auto statTracker = DependencyManager::get<StatTracker>();
+    statTracker->incrementStat(STAT_TEA_REQUEST_STARTED);
+
+    QUrl url = QUrl(_url);
+    url.setQuery(QUrlQuery());
+    QString path = url.toString().replace(URL_SCHEME_TEA + "://", "");
 
     QTcpSocket socket;
     socket.connectToHost("tivolicloud.com", 17486, QIODevice::ReadWrite);
-    // qDebug() << "Maki AES: connecting";
+
+    QByteArray decryptedData;
 
     if (!socket.waitForConnected(10000)) {
-        // qDebug() << "Maki AES: connected failed";
-        // _result = Timeout;
+        qCDebug(tea) << "Connection timed out" << path;
+        _result = Timeout;
     } else {
-        // qDebug() << "Maki AES: connected";
-
         auto accountManager = DependencyManager::get<AccountManager>();
         QString accessToken = accountManager->getAccountInfo().getAccessToken().token;
-
-        // qDebug() << "Maki AES: path"<<path;
 
         unsigned char random[8];
         RAND_bytes(random, 8);
@@ -263,77 +279,42 @@ QByteArray getFile(QString path) {
             QJsonDocument::JsonFormat::Compact
         );
         QByteArray encryptedRequest = encrypt(requestStr, "");
-        // qDebug() << "Maki AES: encryptedRequest"<<encryptedRequest;
-        // qDebug() << "Maki AES: encryptedRequest"<<QString(encryptedRequest);
 
         socket.write(encryptedRequest);
-        // qDebug() << "Maki AES: sending request";
 
         QByteArray receivedData;
 
         if (socket.waitForBytesWritten(5000)) {
-            // qDebug() << "Maki AES: bytes written!";
-
             // waiting for server to fetch file, encrypt and start sending
-            socket.waitForReadyRead(10000);
+            
+            // socket.waitForReadyRead(10000);
+            socket.waitForDisconnected(-1);
 
-            while (socket.waitForReadyRead(100) || socket.bytesAvailable() > 0) {
-                // qDebug() << "Maki AES: receiving...";
-                receivedData.append(socket.readAll());
-                socket.flush();
-            }
-
-        } else {
-            // qDebug() << "Maki AES: failed, no bytes written";
-            // _result = Timeout;
+            receivedData = socket.readAll();
         }
+
+        socket.close();
 
         if (!receivedData.isEmpty()) {
-            // do stuff
+            decryptedData = decrypt(receivedData, path);
 
-            data = decrypt(receivedData, path);
-            if (data.isEmpty()) {
-                // _result = Error;
+            if (decryptedData.isEmpty()) {
+                qCDebug(tea) << "Failed to decrypt" << path;
+                _result = Error;
             } else {
-                // _result = Success;
+                _result = Success;
             }
-
-            // _result = Success;
         } else {
-            // _result = Error;
+            qCDebug(tea) << "Not found" << path;
+            _result = Error;
         }
-        
-        // qDebug() << "Maki AES: received data length"<<receivedData.length();
-    }
-
-    socket.close();
-
-    // _state = Finished;
-
-    return data;
-}
-
-void TeaResourceRequest::doSend() {
-    auto statTracker = DependencyManager::get<StatTracker>();
-    statTracker->incrementStat(STAT_TEA_REQUEST_STARTED);
-
-    QUrl url = QUrl(_url);
-    url.setQuery(QUrlQuery());
-    QString path = url.toString().replace(URL_SCHEME_TEA + "://", "");
-
-    _data = getFile(path);
-
-    if (_data.isEmpty()) {
-        _result = Error;
-    } else {
-        _result = Success;
     }
 
     _state = Finished;
 
-    recordBytesDownloadedInStats(STAT_TEA_RESOURCE_TOTAL_BYTES, _data.size());
+    recordBytesDownloadedInStats(STAT_TEA_RESOURCE_TOTAL_BYTES, decryptedData.size());
 
-     if (_result == Success) {
+    if (_result == Success) {
         statTracker->incrementStat(STAT_TEA_REQUEST_FAILED);
         if (loadedFromCache()) {
             statTracker->incrementStat(STAT_TEA_REQUEST_CACHE);
@@ -341,6 +322,8 @@ void TeaResourceRequest::doSend() {
     } else {
         statTracker->incrementStat(STAT_TEA_REQUEST_SUCCESS);
     }
+
+    data.reset(new QByteArray(decryptedData.data(), decryptedData.length()));
 
     emit finished();
 }

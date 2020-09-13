@@ -1,6 +1,8 @@
 #ifndef hifi_TeaResourceRequest_h
 #define hifi_TeaResourceRequest_h
 
+#include <QFutureWatcher>
+#include <QSharedPointer>
 #include <QUrl>
 
 #include <ResourceRequest.h>
@@ -17,7 +19,11 @@ public:
 
 protected:
     virtual void doSend() override;
+    void send();
 
+    QFutureWatcher<void>* watcher;
+    QScopedPointer<QByteArray> data;
+    
 };
 
 #endif // hifi_TeaResourceRequest_h
