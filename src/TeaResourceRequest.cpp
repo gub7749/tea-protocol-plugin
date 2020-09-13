@@ -172,7 +172,7 @@ QByteArray decrypt(QByteArray cipherdata, QString seed) {
 
     // qDebug() << "Maki AES: Cipher data length" << cipherdata.length();
 
-    unsigned char plaindata[cipherdata.length()];
+    unsigned char* plaindata = (unsigned char*)malloc(cipherdata.length());
     int plaindata_len;
 
     const EVP_CIPHER *cipher = EVP_aes_256_cbc();
@@ -234,16 +234,21 @@ QByteArray decrypt(QByteArray cipherdata, QString seed) {
     // qDebug() << "Maki AES: Plain data length" << plaindata_len;
 
     data = QByteArray(reinterpret_cast<char*>(plaindata), plaindata_len);
+    free(plaindata);
     return data;
 }
 
 void TeaResourceRequest::doSend() {
-    QFuture<void> future = QtConcurrent::run(this, &TeaResourceRequest::send);
     watcher = new QFutureWatcher<void>(this);
-    connect(watcher, &QFutureWatcherBase::finished, this, [=]{
-        if (!data.isNull()) _data = *data.take();
+    connect(watcher, &QFutureWatcherBase::finished, this, [=](){
+        if (data.first > 0) {
+            _data = QByteArray(data.first, data.second);
+            free(data.first);
+        }
         emit finished();
-    });
+    }, Qt::QueuedConnection);
+    
+    QFuture<void> future = QtConcurrent::run(this, &TeaResourceRequest::send);
     watcher->setFuture(future);
 }
 
@@ -259,6 +264,8 @@ void TeaResourceRequest::send() {
     socket.connectToHost("tivolicloud.com", 17486, QIODevice::ReadWrite);
 
     QByteArray decryptedData;
+
+    // qCDebug(tea) << "Requesting" << path;
 
     if (!socket.waitForConnected(10000)) {
         qCDebug(tea) << "Connection timed out" << path;
@@ -306,7 +313,7 @@ void TeaResourceRequest::send() {
             }
         } else {
             qCDebug(tea) << "Not found" << path;
-            _result = Error;
+            _result = NotFound;
         }
     }
 
@@ -323,7 +330,15 @@ void TeaResourceRequest::send() {
         statTracker->incrementStat(STAT_TEA_REQUEST_SUCCESS);
     }
 
-    data.reset(new QByteArray(decryptedData.data(), decryptedData.length()));
+    // qCDebug(tea) << "Received" << path << decryptedData.length();
 
-    emit finished();
+    data.first = (char*)malloc(decryptedData.size());
+
+    if (data.first == 0) {
+        qCDebug(tea) << "No memory to allocate" << path << decryptedData.length();
+        data.second = 0;
+    } else {
+        data.second = decryptedData.length();
+        memcpy(data.first, decryptedData.data(), decryptedData.length());
+    }
 }
