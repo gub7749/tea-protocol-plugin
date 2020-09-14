@@ -11,10 +11,9 @@ stages:
         - python .gitlab/prepare-interface.py
 
 include:
-    - local: .gitlab/build/linux.gitlab-ci.yml
-    - local: .gitlab/build/windows.gitlab-ci.yml
-    - local: .gitlab/build/macos.gitlab-ci.yml
-    - local: .gitlab/package.gitlab-ci.yml
+    - local: .gitlab/linux.gitlab-ci.yml
+    - local: .gitlab/windows.gitlab-ci.yml
+    - local: .gitlab/macos.gitlab-ci.yml
 
 package:
     stage: package
