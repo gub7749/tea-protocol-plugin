@@ -6,9 +6,7 @@ windows:
     tags:
         - windows
 
-    extends:
-        - .production
-        - .prepare-interface
+    extends: .production
 
     variables:
         BUILD_TYPE: Release
@@ -25,6 +23,8 @@ windows:
         CL: /MP # might make vcpkg build faster but doesn't
 
     script:
+        - python .gitlab/prepare-interface.py
+
         - mkdir build
         - cd build
 

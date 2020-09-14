@@ -3,9 +3,7 @@ macos:
     tags:
         - macos
 
-    extends:
-        - .production
-        - .prepare-interface
+    extends: .production
 
     variables:
         BUILD_TYPE: Release
@@ -20,6 +18,8 @@ macos:
         OSX_SDK: "10.11"
 
     script:
+        - python .gitlab/prepare-interface.py
+
         - mkdir -p build
         - cd build
 

@@ -6,10 +6,6 @@ stages:
     only:
         - /^[0-9]+?\.[0-9]+?\.[0-9]+?$/i
 
-.prepare-interface:
-    before_script:
-        - python .gitlab/prepare-interface.py
-
 include:
     - local: .gitlab/linux.gitlab-ci.yml
     - local: .gitlab/windows.gitlab-ci.yml
