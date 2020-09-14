@@ -39,4 +39,4 @@ windows:
     artifacts:
         expire_in: 1 day
         paths:
-            - teaProtocol
+            - teaProtocol-$CI_COMMIT_TAG
