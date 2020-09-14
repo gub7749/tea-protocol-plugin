@@ -20,6 +20,8 @@ linux:
             - build/TIVOLI_VCPKG
 
     script:
+        - python3 .gitlab/prepare-interface.py
+
         - mkdir -p build
         - cd build
         - /usr/local/bin/cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE
@@ -57,6 +59,8 @@ linux arm64:
             - build/TIVOLI_VCPKG
 
     script:
+        - python3 .gitlab/prepare-interface.py
+
         - mkdir -p build
         - cd build
         - /usr/local/bin/cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DDISABLE_HIFI_CODEC=ON -DDISABLE_PCM_CODEC=ON
