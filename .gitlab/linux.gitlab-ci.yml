@@ -41,8 +41,8 @@ linux:
         - /usr/local/bin/cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE
         - make teaProtocol -j$(nproc)
 
-        - mkdir -p ../teaProtocol/linux64
-        - mv plugins/teaProtocol/libteaProtocol.so ../teaProtocol/linux64/libteaProtocol-$RELEASE_NUMBER.so
+        - mkdir -p ../teaProtocol/linux
+        - mv plugins/teaProtocol/libteaProtocol.so ../teaProtocol/linux/libteaProtocol-$RELEASE_NUMBER.so
 
     artifacts:
         expire_in: 1 day
@@ -102,8 +102,8 @@ linux arm64:
         - /usr/local/bin/cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DDISABLE_HIFI_CODEC=ON -DDISABLE_PCM_CODEC=ON
         - make teaProtocol -j$(nproc)
 
-        - mkdir -p ../teaProtocol/linuxarm64
-        - mv plugins/teaProtocol/libteaProtocol.so ../teaProtocol/linuxarm64/libteaProtocol-$RELEASE_NUMBER.so
+        - mkdir -p ../teaProtocol/linux-arm64
+        - mv plugins/teaProtocol/libteaProtocol.so ../teaProtocol/linux-arm64/libteaProtocol-$RELEASE_NUMBER.so
 
     artifacts:
         expire_in: 1 day
