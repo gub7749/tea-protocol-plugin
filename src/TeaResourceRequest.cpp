@@ -94,14 +94,14 @@ QByteArray encrypt(QByteArray plaindata, QString seed) {
 
     // qDebug() << "Maki AES: Plain data length" << plaindata.length();
 
-    unsigned char cipherdata[plaindata.length() + 128]; // requires a little extra
+    unsigned char* cipherdata = (unsigned char*)malloc(plaindata.length() + 128); // requires a little extra
     int cipherdata_len;
 
     const EVP_CIPHER *cipher = EVP_aes_256_cbc();
 	int iklen = EVP_CIPHER_key_length(cipher);
 	int ivlen = EVP_CIPHER_iv_length(cipher);
 	int iter = 10000; // default in openssl 1.1.1
-	unsigned char keyivpair[iklen + ivlen];
+    unsigned char* keyivpair = (unsigned char*)malloc(iklen + ivlen);
 
     unsigned char key[EVP_MAX_KEY_LENGTH];
     unsigned char iv[EVP_MAX_IV_LENGTH];
@@ -116,7 +116,8 @@ QByteArray encrypt(QByteArray plaindata, QString seed) {
         return data;
 	}
     memcpy(key, keyivpair, iklen);                                              
-  	memcpy(iv, keyivpair + iklen, ivlen); 
+  	memcpy(iv, keyivpair + iklen, ivlen);
+    free(keyivpair);
 
     // qDebug() << "Maki AES: Salt" << QByteArray((char*)salt, 8).toHex();
     // qDebug() << "Maki AES: Key " << QByteArray((char*)key, EVP_MAX_KEY_LENGTH).toHex();
@@ -160,6 +161,7 @@ QByteArray encrypt(QByteArray plaindata, QString seed) {
 
     data = QByteArray(reinterpret_cast<char*>(cipherdata), cipherdata_len);
     data.prepend(header);
+    free(cipherdata);
 
     return data;
 }
@@ -179,7 +181,7 @@ QByteArray decrypt(QByteArray cipherdata, QString seed) {
 	int iklen = EVP_CIPHER_key_length(cipher);
 	int ivlen = EVP_CIPHER_iv_length(cipher);
 	int iter = 10000; // default in openssl 1.1.1
-	unsigned char keyivpair[iklen + ivlen];
+    unsigned char* keyivpair = (unsigned char*)malloc(iklen + ivlen);
 
     unsigned char key[EVP_MAX_KEY_LENGTH];
     unsigned char iv[EVP_MAX_IV_LENGTH];
@@ -194,7 +196,8 @@ QByteArray decrypt(QByteArray cipherdata, QString seed) {
         return data;
 	}
     memcpy(key, keyivpair, iklen);                                              
-  	memcpy(iv, keyivpair + iklen, ivlen); 
+  	memcpy(iv, keyivpair + iklen, ivlen);
+    free(keyivpair);
 
     // qDebug() << "Maki AES: Salt" << salt.toHex();
     // qDebug() << "Maki AES: Key " << QByteArray((char*)key, EVP_MAX_KEY_LENGTH).toHex();
