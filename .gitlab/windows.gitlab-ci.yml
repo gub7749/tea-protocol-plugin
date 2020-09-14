@@ -31,9 +31,10 @@ windows:
         - cmake -DCMAKE_BUILD_TYPE=Release -A x64 ..
         - cmake --build . --parallel --config Release --target teaProtocol
 
-        - mkdir ..\teaProtocol\windows
-        # - move /y plugins\teaProtocol\Release\teaProtocol.dll ..\teaProtocol\windows\teaProtocol-%RELEASE_NUMBER%.dll
-        - Move-Item -Path .\plugins\teaProtocol\Release\teaProtocol.dll -Destination $("..\teaProtocol\windows\teaProtocol-" + $env:RELEASE_NUMBER + ".dll")
+        - New-Item -ItemType directory -Path $("..\teaProtocol-" + $env:RELEASE_NUMBER + "\windows")
+        - Move-Item
+          -Path $(".\plugins\teaProtocol-" + $env:RELEASE_NUMBER + "\Release\teaProtocol.dll")
+          -Destination $("..\teaProtocol-" + $env:RELEASE_NUMBER + "\windows\teaProtocol-" + $env:RELEASE_NUMBER + ".dll")
 
     artifacts:
         expire_in: 1 day

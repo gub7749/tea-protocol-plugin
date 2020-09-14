@@ -32,8 +32,8 @@ macos:
           -G Xcode ..
         - cmake --build . --target teaProtocol --config $BUILD_TYPE | xcpretty
 
-        - mkdir -p ../teaProtocol/macos
-        - mv plugins/teaProtocol/Release/libteaProtocol.dylib ../teaProtocol/macos/libteaProtocol-$RELEASE_NUMBER.dylib
+        - mkdir -p ../teaProtocol-$CI_COMMIT_TAG/macos
+        - mv plugins/teaProtocol/Release/libteaProtocol.dylib ../teaProtocol-$CI_COMMIT_TAG/macos/libteaProtocol-$RELEASE_NUMBER.dylib
 
     artifacts:
         expire_in: 1 day
