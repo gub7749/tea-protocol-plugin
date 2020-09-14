@@ -28,15 +28,17 @@ package:
           artifacts: true
 
     script:
-        - shopt -s extglob
-        - rm -rf !(teaProtocol)
-        - mv teaProtocol/* .
-        - rm -rf teaProtocol
+        # - shopt -s extglob
+        # - rm -rf !(teaProtocol)
+        # - mv teaProtocol/* .
+        # - rm -rf teaProtocol
+        - echo Packaged!
 
     artifacts:
         expire_in: 1 day
         paths:
-            - linux
-            - linux-arm64
-            - windows
-            - macos
+            # - linux
+            # - linux-arm64
+            # - windows
+            # - macos
+            - teaProtocol
