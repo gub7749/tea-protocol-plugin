@@ -31,6 +31,9 @@ package:
         - job: windows
           artifacts: true
 
+    script:
+        - echo Packaged!
+
     artifacts:
         expire_in: 1 day
         paths:
