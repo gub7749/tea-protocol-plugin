@@ -1,0 +1,40 @@
+# windows might fail if trying to clean up files that have a long path name
+# set `git config --system core.longpaths true` on the build machine to fix
+
+interface windows:
+    stage: build
+    tags:
+        - windows
+
+    extends:
+        - .production
+        - .prepare-interface
+
+    variables:
+        BUILD_TYPE: Release
+        RELEASE_TYPE: PRODUCTION
+        STABLE_BUILD: 1
+
+        RELEASE_NUMBER: $CI_COMMIT_TAG
+
+        # TIVOLI_QT_BASE: $CI_PROJECT_DIR/build/TIVOLI_QT
+        # TIVOLI_VCPKG_BASE: $CI_PROJECT_DIR/build/TIVOLI_VCPKG
+        TIVOLI_QT_BASE: C:\TIVOLI_QT
+        TIVOLI_VCPKG_BASE: C:\TIVOLI_VCPKG
+
+        CL: /MP # might make vcpkg build faster but doesn't
+
+    script:
+        - mkdir build
+        - cd build
+
+        - cmake -DCMAKE_BUILD_TYPE=Release -A x64 ..
+        - cmake --build . --parallel --config Release --target teaProtocol
+
+        - mkdir ..\teaProtocol\win64
+        - xcopy /s /e /y plugins\teaProtocol\Release\teaProtocol.dll ..\teaProtocol\win64
+
+    artifacts:
+        expire_in: 1 day
+        paths:
+            - teaProtocol

@@ -1,0 +1,38 @@
+stages:
+    - build
+    - package
+
+.production:
+    only:
+        - /^[0-9]+?\.[0-9]+?\.[0-9]+?$/i
+
+.prepare-interface:
+    before_script:
+        - python .gitlab/prepare-interface.py
+
+include:
+    - local: .gitlab/build/linux.gitlab-ci.yml
+    - local: .gitlab/build/windows.gitlab-ci.yml
+    - local: .gitlab/build/macos.gitlab-ci.yml
+    - local: .gitlab/package.gitlab-ci.yml
+
+package:
+    stage: package
+    image: alpine:latest
+
+    extends: .production
+
+    needs:
+        - job: linux
+          artifacts: true
+        - job: linux arm64
+          artifacts: true
+        - job: macos
+          artifacts: true
+        - job: windows
+          artifacts: true
+
+    artifacts:
+        expire_in: 1 day
+        paths:
+            - teaProtocol
