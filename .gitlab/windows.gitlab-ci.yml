@@ -33,7 +33,7 @@ windows:
 
         - New-Item -ItemType directory -Path $("..\teaProtocol-" + $env:RELEASE_NUMBER + "\windows")
         - Move-Item
-          -Path $(".\plugins\teaProtocol-" + $env:RELEASE_NUMBER + "\Release\teaProtocol.dll")
+          -Path $(".\plugins\teaProtocol\Release\teaProtocol.dll")
           -Destination $("..\teaProtocol-" + $env:RELEASE_NUMBER + "\windows\teaProtocol-" + $env:RELEASE_NUMBER + ".dll")
 
     artifacts:
