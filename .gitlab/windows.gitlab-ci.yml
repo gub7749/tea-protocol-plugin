@@ -1,7 +1,7 @@
 # windows might fail if trying to clean up files that have a long path name
 # set `git config --system core.longpaths true` on the build machine to fix
 
-interface windows:
+windows:
     stage: build
     tags:
         - windows
