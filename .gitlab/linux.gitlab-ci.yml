@@ -42,7 +42,7 @@ linux:
         - make teaProtocol -j$(nproc)
 
         - mkdir -p ../teaProtocol/linux64
-        - mv plugins/teaProtocol/libteaProtocol.so ../teaProtocol/linux64
+        - mv plugins/teaProtocol/libteaProtocol.so ../teaProtocol/linux64/libteaProtocol-$RELEASE_NUMBER.so
 
     artifacts:
         expire_in: 1 day
@@ -103,7 +103,7 @@ linux arm64:
         - make teaProtocol -j$(nproc)
 
         - mkdir -p ../teaProtocol/linuxarm64
-        - mv plugins/teaProtocol/libteaProtocol.so ../teaProtocol/linuxarm64
+        - mv plugins/teaProtocol/libteaProtocol.so ../teaProtocol/linuxarm64/libteaProtocol-$RELEASE_NUMBER.so
 
     artifacts:
         expire_in: 1 day

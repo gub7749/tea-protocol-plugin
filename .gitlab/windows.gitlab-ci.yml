@@ -32,7 +32,7 @@ windows:
         - cmake --build . --parallel --config Release --target teaProtocol
 
         - mkdir ..\teaProtocol\win64
-        - xcopy /s /e /y plugins\teaProtocol\Release\teaProtocol.dll ..\teaProtocol\win64
+        - move /y plugins\teaProtocol\Release\teaProtocol.dll ..\teaProtocol\win64\teaProtocol-%RELEASE_NUMBER%.dll
 
     artifacts:
         expire_in: 1 day
