@@ -5,7 +5,7 @@ macos:
 
     extends:
         - .production
-        - .prepare-inteface
+        - .prepare-interface
 
     variables:
         BUILD_TYPE: Release
