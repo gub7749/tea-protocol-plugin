@@ -241,7 +241,7 @@ QByteArray decrypt(QByteArray cipherdata, QString seed) {
 void TeaResourceRequest::doSend() {
     watcher = new QFutureWatcher<void>(this);
     connect(watcher, &QFutureWatcherBase::finished, this, [=](){
-        if (data.first > 0) {
+        if (data.second > 0) {
             _data = QByteArray(data.first, data.second);
             free(data.first);
         }
