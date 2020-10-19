@@ -35,7 +35,7 @@ with tarfile.open(interfaceArchivePath, "r:gz") as archive:
 	for file in archive.getmembers():
 		file.name = re.sub(r"^interface-master/", "", file.name)
 		archive.extract(file, rootPath)
-	os.remove(interfaceArchivePath)
+os.remove(interfaceArchivePath)
 
 # move tea-protocol-plugin to plugins
 
