@@ -5,14 +5,9 @@
 #include <openssl/ossl_typ.h>
 #include <openssl/rand.h>
 
-#include <QFile>
 #include <QJsonDocument>
 #include <QLoggingCategory>
-#include <QNetworkReply>
 #include <QNetworkRequest>
-#include <QMetaEnum>
-#include <QTcpSocket>
-#include <QtConcurrent/QtConcurrent>
 
 #include <SharedUtil.h>
 #include <StatTracker.h>
@@ -21,6 +16,7 @@
 #include <NetworkLogging.h>
 #include <NetworkingConstants.h>
 #include <ResourceRequest.h>
+#include <ResourceManager.h>
 
 #include "TeaProtocolPlugin.h"
 
@@ -241,107 +237,150 @@ QByteArray decrypt(QByteArray cipherdata, QString seed) {
     return data;
 }
 
-void TeaResourceRequest::doSend() {
-    watcher = new QFutureWatcher<void>(this);
-    connect(watcher, &QFutureWatcherBase::finished, this, [=](){
-        if (data.second > 0) {
-            _data = QByteArray(data.first, data.second);
-            free(data.first);
-        }
-        emit finished();
-    }, Qt::QueuedConnection);
-    
-    QFuture<void> future = QtConcurrent::run(this, &TeaResourceRequest::send);
-    watcher->setFuture(future);
-}
-
-void TeaResourceRequest::send() {
+void TeaResourceRequestWorker::run() {
     auto statTracker = DependencyManager::get<StatTracker>();
     statTracker->incrementStat(STAT_TEA_REQUEST_STARTED);
 
     QUrl url = QUrl(_url);
     url.setQuery(QUrlQuery());
     QString path = url.toString().replace(URL_SCHEME_TEA + "://", "");
-
-    QTcpSocket socket;
-    socket.connectToHost("tivolicloud.com", 17486, QIODevice::ReadWrite);
-
-    QByteArray decryptedData;
+    if (path.startsWith("/")) path = path.mid(1);
 
     // qCDebug(tea) << "Requesting" << path;
 
-    if (!socket.waitForConnected(10000)) {
-        qCDebug(tea) << "Connection timed out" << path;
-        _result = Timeout;
-    } else {
-        auto accountManager = DependencyManager::get<AccountManager>();
-        QString accessToken = accountManager->getAccountInfo().getAccessToken().token;
+    #define TEA_URL "https://tea.tivolicloud.com"
+    // #define TEA_URL "http://tea.localhost:3000"
+    QUrl networkRequestUrl = QUrl(TEA_URL);
+    networkRequestUrl.setPath("/" + hash("itsteatime" + path, QCryptographicHash::Algorithm::Sha224));
+    if (networkRequestUrl.isEmpty()) networkRequestUrl = QUrl(TEA_URL);
 
-        unsigned char random[8];
-        RAND_bytes(random, 8);
+    QNetworkRequest networkRequest(networkRequestUrl);
+    networkRequest.setHeader(QNetworkRequest::UserAgentHeader, TIVOLI_CLOUD_VR_USER_AGENT);
+    networkRequest.setAttribute(QNetworkRequest::FollowRedirectsAttribute, false);
+    networkRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/octet-stream");
 
-        QVariantMap request;
-        request["accessToken"] = accessToken;
-        request["path"] = path;
-        request["random"] = QByteArray(reinterpret_cast<char*>(random), 8).toHex();
+    // make request body
 
-        QByteArray requestStr = QJsonDocument::fromVariant(request).toJson(
-            QJsonDocument::JsonFormat::Compact
-        );
-        QByteArray encryptedRequest = encrypt(requestStr, "");
+    auto accountManager = DependencyManager::get<AccountManager>();
+    QString accessToken = accountManager->getAccountInfo().getAccessToken().token;
 
-        socket.write(encryptedRequest);
+    unsigned char random[8];
+    RAND_bytes(random, 8);
 
-        QByteArray receivedData;
+    QVariantMap request;
+    request["accessToken"] = accessToken;
+    request["path"] = path;
+    request["random"] = QByteArray(reinterpret_cast<char*>(random), 8).toHex();
 
-        if (socket.waitForBytesWritten(5000)) {
-            // waiting for server to fetch file, encrypt and start sending
-            
-            // socket.waitForReadyRead(10000);
-            socket.waitForDisconnected(-1);
+    QByteArray requestStr = QJsonDocument::fromVariant(request).toJson(
+        QJsonDocument::JsonFormat::Compact
+    );
+    QByteArray encryptedRequest = encrypt(requestStr, "");
 
-            receivedData = socket.readAll();
-        }
+    // networkRequest.setHeader(QNetworkRequest::ContentLengthHeader, encryptedRequest.length());
+    networkRequest.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferNetwork);
+    networkRequest.setRawHeader(QString("X-Tea-Request").toLocal8Bit(), encryptedRequest.toBase64());
 
-        socket.close();
+    // get request
+
+    QNetworkAccessManager networkAccessManager;
+    networkAccessManager.setTransferTimeout(1000 * 10);
+    // TODO: doesnt work because the networkDiskCache lives on another thread
+    // auto resourceManager = DependencyManager::get<ResourceManager>();
+    // if (resourceManager) {
+    //     networkAccessManager.setCache(resourceManager->networkDiskCache);
+    // }
+
+    QEventLoop loop;
+    QNetworkReply* reply = networkAccessManager.get(networkRequest);
+    connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    loop.exec();
+        
+    QByteArray decryptedData;
+    QString contentType;
+
+    if (reply->error() == QNetworkReply::NoError) {
+        QByteArray receivedData = reply->readAll();
+
+        _loadedFromCache = reply->attribute(QNetworkRequest::SourceIsFromCacheAttribute).toBool();
+
+        // qCDebug(tea) << "Received" << path << "from cache" << _loadedFromCache;
 
         if (!receivedData.isEmpty()) {
             decryptedData = decrypt(receivedData, path);
 
             if (decryptedData.isEmpty()) {
                 qCDebug(tea) << "Failed to decrypt" << path;
-                _result = Error;
+                _result = ResourceRequest::Result::Error;
             } else {
-                _result = Success;
+                _result = ResourceRequest::Result::Success;
+
+                contentType = reply->header(QNetworkRequest::ContentTypeHeader)
+                    .toString().split(";").first();
             }
         } else {
-            qCDebug(tea) << "Not found" << path;
-            _result = NotFound;
+            qCDebug(tea) << "No data received" << path 
+                << reply->attribute(QNetworkRequest::HttpStatusCodeAttribute)
+                << reply->attribute(QNetworkRequest::HttpReasonPhraseAttribute);
+            _result = ResourceRequest::Result::NotFound;
+        }
+    } else {
+        switch (reply->error()) {
+            case QNetworkReply::TimeoutError:
+            case QNetworkReply::OperationCanceledError:
+                qCDebug(tea) << "Connection timed out" << path;
+                _result = ResourceRequest::Result::Timeout;
+                break;
+
+            case QNetworkReply::ContentNotFoundError:
+                qCDebug(tea) << "Not found" << path;
+                _result = ResourceRequest::Result::NotFound;
+                break;
+
+            default:
+                qCDebug(tea) << "Error" << path << reply->error();
+                _result = ResourceRequest::Result::Error;
+                break;
         }
     }
 
-    _state = Finished;
+    reply->disconnect(this);
+    reply->deleteLater();
+    reply = nullptr;
 
-    recordBytesDownloadedInStats(STAT_TEA_RESOURCE_TOTAL_BYTES, decryptedData.size());
+    _state = ResourceRequest::State::Finished;
 
-    if (_result == Success) {
+    if (_result == ResourceRequest::Result::Success) {
         statTracker->incrementStat(STAT_TEA_REQUEST_FAILED);
-        if (loadedFromCache()) {
+        if (_loadedFromCache) {
             statTracker->incrementStat(STAT_TEA_REQUEST_CACHE);
         }
     } else {
         statTracker->incrementStat(STAT_TEA_REQUEST_SUCCESS);
     }
 
-    // qCDebug(tea) << "Received" << path << decryptedData.length();
+    emit finished(decryptedData, contentType);
+}
 
-    data.first = (char*)malloc(decryptedData.size());
+void TeaResourceRequest::doSend() {
+    worker = new TeaResourceRequestWorker();
+    worker->_url = _url;
 
-    if (data.first == 0) {
-        qCDebug(tea) << "No memory to allocate" << path << decryptedData.length();
-        data.second = 0;
-    } else {
-        data.second = decryptedData.length();
-        memcpy(data.first, decryptedData.data(), decryptedData.length());
-    }
+    connect(worker, &QThread::finished, worker, &QObject::deleteLater);
+    connect(worker, &TeaResourceRequestWorker::finished,
+        this, [&](QByteArray data, QString webMediaType){
+            _loadedFromCache = worker->_loadedFromCache;
+            _data = data;
+            _webMediaType = webMediaType;
+            _result = worker->_result;
+            _state = worker->_state;
+
+            recordBytesDownloadedInStats(STAT_TEA_RESOURCE_TOTAL_BYTES, _data.size());
+
+            emit finished();
+        },
+        Qt::QueuedConnection
+    );
+
+    worker->start();
 }
