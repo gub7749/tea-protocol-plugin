@@ -11,14 +11,6 @@ linux:
 
         RELEASE_NUMBER: $CI_COMMIT_TAG
 
-        TIVOLI_QT_BASE: $CI_PROJECT_DIR/build/TIVOLI_QT
-        TIVOLI_VCPKG_BASE: $CI_PROJECT_DIR/build/TIVOLI_VCPKG
-
-    cache:
-        paths:
-            - build/TIVOLI_QT
-            - build/TIVOLI_VCPKG
-
     script:
         - python3 .gitlab/prepare-interface.py
 
@@ -50,14 +42,6 @@ linux arm64:
         STABLE_BUILD: 1
 
         RELEASE_NUMBER: $CI_COMMIT_TAG
-
-        TIVOLI_QT_BASE: $CI_PROJECT_DIR/build/TIVOLI_QT
-        TIVOLI_VCPKG_BASE: $CI_PROJECT_DIR/build/TIVOLI_VCPKG
-
-    cache:
-        paths:
-            - build/TIVOLI_QT
-            - build/TIVOLI_VCPKG
 
     script:
         - python3 .gitlab/prepare-interface.py
