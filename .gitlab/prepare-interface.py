@@ -1,8 +1,11 @@
 from os import path
 import os
+import re
 import shutil
 import sys
 import subprocess
+import tarfile
+import urllib.request
 
 rootPath = path.abspath(path.join(path.dirname(path.abspath(__file__)), ".."))
 teaProtocolPluginPath = path.join(rootPath, "tea-protocol-plugin")
@@ -18,23 +21,25 @@ for filename in os.listdir(rootPath):
 		continue
 	shutil.move(filePath, path.join(teaProtocolPluginPath, filename))
 
-# git clone interface
+# download and extract interface
 
-def run(processArgs):
-	process = subprocess.Popen(
-	    processArgs.split(" "),
-	    stdout=sys.stdout,
-	    stderr=sys.stderr,
-	    cwd=rootPath
-	)
-	process.wait()
+print("Downloading interface...")
+interfaceArchivePath = path.join(rootPath, "interface.tar.gz")
+urllib.request.urlretrieve(
+    "https://git.tivolicloud.com/tivolicloud/interface/-/archive/master/interface-master.tar.gz",
+    interfaceArchivePath
+)
 
-run("git init")
-run("git remote add origin https://git.tivolicloud.com/tivolicloud/interface")
-run("git fetch")
-run("git branch master origin/master")
-run("git checkout -f master")
+print("Extracting interface...")
+with tarfile.open(interfaceArchivePath, "r:gz") as archive:
+	for file in archive.getmembers():
+		file.name = re.sub(r"^interface-master/", "", file.name)
+		archive.extract(file, rootPath)
+	os.remove(interfaceArchivePath)
 
 # move tea-protocol-plugin to plugins
 
-shutil.move(teaProtocolPluginPath, path.join(rootPath, "plugins", "tea-protocol-plugin"))
+shutil.move(
+    teaProtocolPluginPath,
+    path.join(rootPath, "plugins", "tea-protocol-plugin")
+)
