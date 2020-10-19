@@ -23,7 +23,7 @@ windows:
         CL: /MP # might make vcpkg build faster but doesn't
 
     script:
-        - python3 .gitlab/prepare-interface.py
+        - python .gitlab/prepare-interface.py
 
         - mkdir build
         - cd build
