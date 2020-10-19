@@ -1,26 +1,11 @@
 #ifndef hifi_TeaResourceRequest_h
 #define hifi_TeaResourceRequest_h
 
-#include <QThread>
 #include <QUrl>
+#include <QNetworkReply>
+#include <QTimer>
 
 #include <ResourceRequest.h>
-
-class TeaResourceRequestWorker : public QThread {
-    Q_OBJECT
-
-public:
-    QUrl _url;
-    bool _loadedFromCache;
-    ResourceRequest::Result _result;
-    ResourceRequest::State _state { ResourceRequest::State::NotStarted };
-
-private:
-    void run() override;
-
-signals:
-    void finished(QByteArray data, QString webMediaType);
-};
 
 class TeaResourceRequest : public ResourceRequest {
     Q_OBJECT
@@ -36,7 +21,18 @@ public:
 protected:
     virtual void doSend() override;
 
-    TeaResourceRequestWorker* worker;
+private slots:
+    void onTimeout();
+    void onDownloadProgress(qint64 bytesReceived, qint64 bytesTotal);
+    void onRequestFinished();
+
+private:
+    void setupTimeout();
+    void cleanupTimeout();
+
+    QString path;
+    QTimer* timeout { nullptr };
+    QNetworkReply* reply { nullptr };
 };
 
 #include "TeaResourceRequest.moc"
