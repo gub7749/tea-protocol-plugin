@@ -35,6 +35,4 @@ private:
     QNetworkReply* reply { nullptr };
 };
 
-#include "TeaResourceRequest.moc"
-
 #endif // hifi_TeaResourceRequest_h
