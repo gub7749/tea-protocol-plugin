@@ -33,4 +33,4 @@ package:
     artifacts:
         expire_in: 1 day
         paths:
-            - tea-protocol-plugin
+            - tea-protocol-plugin-$CI_COMMIT_TAG

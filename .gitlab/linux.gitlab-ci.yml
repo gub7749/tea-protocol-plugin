@@ -19,14 +19,14 @@ linux:
         - /usr/local/bin/cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -G Ninja
         - cmake --build . --config $BUILD_TYPE --target tea-protocol-plugin
 
-        - mkdir -p ../tea-protocol-plugin/linux
+        - mkdir -p ../tea-protocol-plugin-$CI_COMMIT_TAG/linux
         - mv plugins/tea-protocol-plugin/libtivoli-tea-protocol-plugin.so
-          ../tea-protocol-plugin/linux
+          ../tea-protocol-plugin-$CI_COMMIT_TAG/linux
 
     artifacts:
         expire_in: 1 day
         paths:
-            - tea-protocol-plugin
+            - tea-protocol-plugin-$CI_COMMIT_TAG
 
 linux arm64:
     stage: build
@@ -54,11 +54,11 @@ linux arm64:
           -G Ninja
         - cmake --build . --config $BUILD_TYPE --target tea-protocol-plugin
 
-        - mkdir -p ../tea-protocol-plugin/linux-arm64
+        - mkdir -p ../tea-protocol-plugin-$CI_COMMIT_TAG/linux-arm64
         - mv plugins/tea-protocol-plugin/libtivoli-tea-protocol-plugin.so
-          ../tea-protocol-plugin/linux-arm64
+          ../tea-protocol-plugin-$CI_COMMIT_TAG/linux-arm64
 
     artifacts:
         expire_in: 1 day
         paths:
-            - tea-protocol-plugin
+            - tea-protocol-plugin-$CI_COMMIT_TAG

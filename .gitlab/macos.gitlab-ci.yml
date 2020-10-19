@@ -29,11 +29,11 @@ macos:
           -G Ninja ..
         - cmake --build . --config $BUILD_TYPE --target tea-protocol-plugin
 
-        - mkdir -p ../tea-protocol-plugin/macos
+        - mkdir -p ../tea-protocol-plugin-$CI_COMMIT_TAG/macos
         - mv plugins/tea-protocol-plugin/libtivoli-tea-protocol-plugin.dylib
-          ../tea-protocol-plugin/macos
+          ../tea-protocol-plugin-$CI_COMMIT_TAG/macos
 
     artifacts:
         expire_in: 1 day
         paths:
-            - tea-protocol-plugin
+            - tea-protocol-plugin-$CI_COMMIT_TAG

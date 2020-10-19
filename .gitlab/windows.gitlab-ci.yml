@@ -31,12 +31,12 @@ windows:
         - cmake -DCMAKE_BUILD_TYPE=Release -A x64 ..
         - cmake --build . --parallel --config Release --target tea-protocol-plugin
 
-        - New-Item -ItemType directory -Path $("..\tea-protocol-plugin\windows")
+        - New-Item -ItemType directory -Path $("..\tea-protocol-plugin-" + $env:RELEASE_NUMBER + "\windows")
         - Move-Item
           -Path $(".\plugins\tea-protocol-plugin\Release\tivoli-tea-protocol-plugin.dll")
-          -Destination $("..\tea-protocol-plugin\windows\tivoli-tea-protocol-plugin.dll")
+          -Destination $("..\tea-protocol-plugin-" + $env:RELEASE_NUMBER + "\windows\tivoli-tea-protocol-plugin.dll")
 
     artifacts:
         expire_in: 1 day
         paths:
-            - tea-protocol-plugin
+            - tea-protocol-plugin-$CI_COMMIT_TAG
