@@ -29,14 +29,14 @@ windows:
         - cd build
 
         - cmake -DCMAKE_BUILD_TYPE=Release -A x64 ..
-        - cmake --build . --parallel --config Release --target teaProtocol
+        - cmake --build . --parallel --config Release --target tea-protocol-plugin
 
-        - New-Item -ItemType directory -Path $("..\teaProtocol-" + $env:RELEASE_NUMBER + "\windows")
+        - New-Item -ItemType directory -Path $("..\tea-protocol-plugin\windows")
         - Move-Item
-          -Path $(".\plugins\teaProtocol\Release\teaProtocol.dll")
-          -Destination $("..\teaProtocol-" + $env:RELEASE_NUMBER + "\windows\teaProtocol-" + $env:RELEASE_NUMBER + ".dll")
+          -Path $(".\plugins\tea-protocol-plugin\Release\tivoli-tea-protocol-plugin.dll")
+          -Destination $("..\tea-protocol-plugin\windows\tivoli-tea-protocol-plugin.dll")
 
     artifacts:
         expire_in: 1 day
         paths:
-            - teaProtocol-$CI_COMMIT_TAG
+            - tea-protocol-plugin
