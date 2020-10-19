@@ -5,7 +5,6 @@ import shutil
 import sys
 import subprocess
 import tarfile
-import urllib
 import urllib.request
 
 rootPath = path.abspath(path.join(path.dirname(path.abspath(__file__)), ".."))

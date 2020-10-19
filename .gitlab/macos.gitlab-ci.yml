@@ -17,7 +17,7 @@ macos:
         OSX_SDK: "10.11"
 
     script:
-        - python .gitlab/prepare-interface.py
+        - python3 .gitlab/prepare-interface.py
 
         - mkdir -p build
         - cd build
