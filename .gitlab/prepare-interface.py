@@ -26,14 +26,14 @@ for filename in os.listdir(rootPath):
 print("Downloading interface...")
 interfaceArchivePath = path.join(rootPath, "interface.tar.gz")
 urllib.request.urlretrieve(
-    "https://git.tivolicloud.com/tivolicloud/interface/-/archive/master/interface-master.tar.gz",
+    "https://git.tivolicloud.com/tivolicloud/interface/-/archive/main/interface-main.tar.gz",
     interfaceArchivePath
 )
 
 print("Extracting interface...")
 with tarfile.open(interfaceArchivePath, "r:gz") as archive:
 	for file in archive.getmembers():
-		file.name = re.sub(r"^interface-master/", "", file.name)
+		file.name = re.sub(r"^interface-main/", "", file.name)
 		archive.extract(file, rootPath)
 os.remove(interfaceArchivePath)
 
