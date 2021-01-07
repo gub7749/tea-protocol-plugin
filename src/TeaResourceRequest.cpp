@@ -85,8 +85,6 @@ QString password(QString seed = "") {
 }
 
 QByteArray encrypt(QByteArray plaindata, QString seed) {
-    QByteArray data;
-
     unsigned char salt[8];
     RAND_bytes(salt, 8);
 
@@ -111,7 +109,7 @@ QByteArray encrypt(QByteArray plaindata, QString seed) {
         EVP_sha512(), iklen + ivlen, keyivpair
 	)) {
 		// qDebug() << "Maki AES: Failed to get Key IV pair";
-        return data;
+        return QByteArray();
 	}
     memcpy(key, keyivpair, iklen);                                              
   	memcpy(iv, keyivpair + iklen, ivlen);
@@ -125,12 +123,12 @@ QByteArray encrypt(QByteArray plaindata, QString seed) {
     EVP_CIPHER_CTX *ctx;   
 	if (!(ctx = EVP_CIPHER_CTX_new())) {
 		// qDebug() << "Maki AES: Failed to init ctx";
-        return data;
+        return QByteArray();
 	}
     // qDebug() << "Maki AES: Initialized ctx";
     if (!EVP_EncryptInit_ex(ctx, cipher, NULL, key, iv)) {
 		// qDebug() << "Maki AES: Failed to init encrypt";
-        return data;
+        return QByteArray();
 	}
     // qDebug() << "Maki AES: Initialized encrypt";
     if (!EVP_EncryptUpdate(ctx,
@@ -138,7 +136,7 @@ QByteArray encrypt(QByteArray plaindata, QString seed) {
         (unsigned char*)plaindata.constData(), plaindata.length()
     )) {
 		// qDebug() << "Maki AES: Failed to update encrypt";
-        return data;
+        return QByteArray();
 	}
     // qDebug() << "Maki AES: Updated encrypt";
     cipherdata_len = len;
@@ -146,7 +144,7 @@ QByteArray encrypt(QByteArray plaindata, QString seed) {
         cipherdata + len, &len)
     ) {
 		// qDebug() << "Maki AES: Failed to finalize encrypt";
-        return data;
+        return QByteArray();
 	}
     // qDebug() << "Maki AES: Finalized encrypt";
     cipherdata_len += len;
@@ -157,7 +155,7 @@ QByteArray encrypt(QByteArray plaindata, QString seed) {
     QByteArray header = QByteArray(reinterpret_cast<char*>(salt), 8);
     header.prepend(QString("Salted__").toLocal8Bit());
 
-    data = QByteArray(reinterpret_cast<char*>(cipherdata), cipherdata_len);
+    QByteArray data = QByteArray(reinterpret_cast<char*>(cipherdata), cipherdata_len);
     data.prepend(header);
     free(cipherdata);
 
@@ -165,8 +163,6 @@ QByteArray encrypt(QByteArray plaindata, QString seed) {
 }
 
 QByteArray decrypt(QByteArray cipherdata, QString seed) {
-    QByteArray data;
-
     QByteArray salt = cipherdata.mid(8, 8);
     cipherdata.remove(0, 16); // Salted__xxxxxxxx
 
@@ -191,7 +187,7 @@ QByteArray decrypt(QByteArray cipherdata, QString seed) {
         EVP_sha512(), iklen + ivlen, keyivpair
 	)) {
 		// qDebug() << "Maki AES: Failed to get Key IV pair";
-        return data;
+        return QByteArray();
 	}
     memcpy(key, keyivpair, iklen);                                              
   	memcpy(iv, keyivpair + iklen, ivlen);
@@ -205,12 +201,12 @@ QByteArray decrypt(QByteArray cipherdata, QString seed) {
     EVP_CIPHER_CTX *ctx;   
 	if (!(ctx = EVP_CIPHER_CTX_new())) {
 		// qDebug() << "Maki AES: Failed to init ctx";
-        return data;
+        return QByteArray();
 	}
     // qDebug() << "Maki AES: Initialized ctx";
     if (!EVP_DecryptInit_ex(ctx, cipher, NULL, key, iv)) {
 		// qDebug() << "Maki AES: Failed to init decrypt";
-        return data;
+        return QByteArray();
 	}
     // qDebug() << "Maki AES: Initialized decrypt";
     if (!EVP_DecryptUpdate(ctx,
@@ -218,7 +214,7 @@ QByteArray decrypt(QByteArray cipherdata, QString seed) {
         (unsigned char*)cipherdata.constData(), cipherdata.length()
     )) {
 		// qDebug() << "Maki AES: Failed to update decrypt";
-        return data;
+        return QByteArray();
 	}
     // qDebug() << "Maki AES: Updated decrypt";
     plaindata_len = len;
@@ -226,7 +222,7 @@ QByteArray decrypt(QByteArray cipherdata, QString seed) {
         plaindata + len, &len)
     ) {
 		// qDebug() << "Maki AES: Failed to finalize decrypt";
-        return data;
+        return QByteArray();
 	}
     // qDebug() << "Maki AES: Finalized decrypt";
     plaindata_len += len;
@@ -234,7 +230,7 @@ QByteArray decrypt(QByteArray cipherdata, QString seed) {
 
     // qDebug() << "Maki AES: Plain data length" << plaindata_len;
 
-    data = QByteArray(reinterpret_cast<char*>(plaindata), plaindata_len);
+    QByteArray data = QByteArray(reinterpret_cast<char*>(plaindata), plaindata_len);
     free(plaindata);
     return data;
 }
