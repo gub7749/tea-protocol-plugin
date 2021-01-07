@@ -17,6 +17,8 @@
 #include <NetworkingConstants.h>
 #include <ResourceRequest.h>
 #include <ResourceManager.h>
+#include <Gzip.h>
+#include <Brotli.h>
 
 #include "TeaProtocolPlugin.h"
 
@@ -275,6 +277,9 @@ void TeaResourceRequest::doSend() {
     networkRequest.setAttribute(QNetworkRequest::FollowRedirectsAttribute, false);
     networkRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/octet-stream");
 
+    // when overriding Accept-Encoding, qt disables auto decompress
+    networkRequest.setRawHeader("Accept-Encoding", "gzip, br");
+
     // make request body
 
     auto accountManager = DependencyManager::get<AccountManager>();
@@ -354,6 +359,29 @@ void TeaResourceRequest::onRequestFinished() {
 
                 _webMediaType = reply->header(QNetworkRequest::ContentTypeHeader)
                     .toString().split(";").first();
+
+                auto contentEncoding = reply->rawHeader("Content-Encoding");                
+                if (contentEncoding.size() > 0) {
+                    QByteArray decompressedData;
+                    if (contentEncoding.compare("gzip", Qt::CaseInsensitive) == 0) {
+                        if (gunzip(_data, decompressedData)) {
+                            _data = decompressedData;
+                        } else {
+                            qCDebug(tea) << "Failed to decompress gzip for: " << _url;
+                            _result = Error;
+                        }
+                    } else if (contentEncoding.compare("br", Qt::CaseInsensitive) == 0) {
+                        if (brotliDecompress(_data, decompressedData)) {
+                            _data = decompressedData;
+                        } else {
+                            qCDebug(tea) << "Failed to decompress brotli for: " << _url;
+                            _result = Error;
+                        }
+                    } else {
+                        qCDebug(tea) << "Unknown content-encoding: " << contentEncoding;
+                        _result = Error;
+                    }
+                }
             }
         } else {
             qCDebug(tea) << "No data received" << path 
